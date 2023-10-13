@@ -9,7 +9,7 @@ class NICE:
         self.RULES['network_structure']  = [3, 1, 1]     # nodes in layers 'A', 'B', and 'C'
         self.RULES['randomize_networks'] = True          # gen 0 brains are random or zero'd
         self.RULES['node_space']         = 1             # digits length for each node
-        self.RULES['weights_space']      = [-1, 1]       # random value limits for weights
+        self.RULES['weights_space']      = [0, 4]        # random value limits for weights
         self.RULES['mutation_rate']      = .3            # each mutation occurance chance
         self.RULES['activation_slopes']  = [0, 1]        # limits of f(x): m*x as x -> inf
         self.RULES['num_parents']        = 2             # parents chosen for each child
@@ -216,7 +216,7 @@ class NICE:
         return brain
 
     def Activate(self, x):
-        return x + abs(x) - abs(x+1)
+        return x - abs(x) + abs(x-1)
 
     def Diff(self, x, y):
         return (x - y) ** 2
