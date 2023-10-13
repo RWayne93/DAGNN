@@ -2,7 +2,7 @@ from random import random as R
 from random import choice as RC
 from random import choices as RCS
 
-class NICEClass:
+class NICE:
     def __init__(self):
         self.RULES = {}
         self.RULES['population']         = 32           # brain population size

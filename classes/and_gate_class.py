@@ -1,6 +1,6 @@
-from NICEClass import NICEClass
+from NICEClass import NICE
 
-Brain = NICEClass()
+Brain = NICE()
 
 # create tests
 input_nodes  = list(Brain.GenerateNodes('A', Brain.RULES['network_structure'][0]))
