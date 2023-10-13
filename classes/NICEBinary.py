@@ -30,3 +30,37 @@ child2.mutate()
 
 print(f"Child1: {child1.bin_string}")
 print(f"Child2: {child2.bin_string}")
+
+# class NeuralNetwork:
+#     def __init__(self):
+#         # Sample binary representation
+#         self.nodes = '11001' # Represents values of nodes
+#         self.links = '10101' # Represents presence/absence of links
+    
+#     def mutate(self):
+#         # Toggle a random bit in nodes or links
+#         if random.choice([True, False]):
+#             idx = random.randint(0, len(self.nodes) - 1)
+#             self.nodes = self.nodes[:idx] + ('1' if self.nodes[idx] == '0' else '0') + self.nodes[idx + 1:]
+#         else:
+#             idx = random.randint(0, len(self.links) - 1)
+#             self.links = self.links[:idx] + ('1' if self.links[idx] == '0' else '0') + self.links[idx + 1:]
+    
+#     def crossover(self, other):
+#         # Split at random point and swap parts
+#         idx = random.randint(0, len(self.nodes) - 1)
+#         self.nodes, other.nodes = self.nodes[:idx] + other.nodes[idx:], other.nodes[:idx] + self.nodes[idx:]
+        
+#         idx = random.randint(0, len(self.links) - 1)
+#         self.links, other.links = self.links[:idx] + other.links[idx:], other.links[:idx] + self.links[idx:]
+        
+#         return other
+
+#     # ... other functions ...
+
+# # Sample usage
+# nn1 = NeuralNetwork()
+# nn2 = NeuralNetwork()
+
+# nn1.mutate()
+# nn2 = nn1.crossover(nn2)
