@@ -49,7 +49,7 @@ class NICEClass:
         return nodes
 
     def GenerateID(self, node=''):
-        if type(node) == type(tuple()):
+        if isinstance(node, tuple):
             a, b = node
             a = 0 if a[0] == 'A' else float('.' + a[1:]) + self.Space()
             b = 1 if b[0] == 'C' else float('.' + b[1:])
@@ -88,9 +88,12 @@ class NICEClass:
         if p is None:
             p = self.RULES['mutation_rate']
         B = [node for node in brain['nodes'] if node[0] == 'B']
-        if R() < p and len(B) > 0: brain, B = self.DeleteNode(brain)
-        if R() < p and len(B) > 1: brain = self.MoveNode(brain)
-        if R() < p: brain = self.AddNode(brain)
+        if R() < p and len(B) > 0: 
+            brain, B = self.DeleteNode(brain)
+        if R() < p and len(B) > 1: 
+            brain = self.MoveNode(brain)
+        if R() < p: 
+            brain = self.AddNode(brain)
         return self.Sort(brain)
 
     def DeleteNode(self, brain):
