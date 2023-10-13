@@ -1,4 +1,5 @@
 from NICEClass import NICE
+from multiprocessing import Pool
 
 Brain = NICE()
 
@@ -36,10 +37,23 @@ def Test(NN):
 # # populate
 Brain.NN = Brain.Populate(Brain.RULES['network_structure'], Brain.RULES['population'])
 #print(population)
-# # test, speciate, selection, repeat
-for i in range(100):
-    Brain.NN = Brain.Selection(Brain.Speciate(Test(Brain.NN)))
-    print(f'generation {i} {Brain.NN[0]['fitness']}')
+# test, speciate, selection, repeat
+# for i in range(9999):
+#     Brain.NN = Brain.Selection(Brain.Speciate(Test(Brain.NN)))
+#     print(f'generation {i} {Brain.NN[0]['fitness']}')
+
+# print(Brain.NN[0])
+# print(Brain.Size(Brain.NN[0]))
+
+def test_brain(brain):
+    return Test([brain])[0]
+
+if __name__ == '__main__':
+    with Pool() as p:
+        for i in range(15000):
+            Brain.NN = p.map(test_brain, Brain.NN)
+            Brain.NN = Brain.Selection(Brain.Speciate(Brain.NN))
+            print(f'generation {i} {Brain.NN[0]['fitness']}')
 
 print(Brain.NN[0])
 print(Brain.Size(Brain.NN[0]))
