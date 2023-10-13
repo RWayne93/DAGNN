@@ -5,7 +5,7 @@ from random import choices as RCS
 class NICE:
     def __init__(self):
         self.RULES = {}
-        self.RULES['population']         = 32           # brain population size
+        self.RULES['population']         = 32            # brain population size
         self.RULES['network_structure']  = [3, 1, 1]     # nodes in layers 'A', 'B', and 'C'
         self.RULES['randomize_networks'] = True          # gen 0 brains are random or zero'd
         self.RULES['node_space']         = 1             # digits length for each node
