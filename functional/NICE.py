@@ -1,6 +1,8 @@
 from random import random as R
 from random import choice as RC
 from random import choices as RCS
+from math import sin
+from math import pi
 
 # global variables
 # NN is population of brains
@@ -8,13 +10,13 @@ from random import choices as RCS
 NN = []
 RULES = {}
 RULES['population']         = 32           # brain population size
-RULES['network_structure']  = [3, 1, 1]     # nodes in layers 'A', 'B', and 'C'
+RULES['network_structure']  = [5, 1, 1]     # nodes in layers 'A', 'B', and 'C'
 RULES['randomize_networks'] = True          # gen 0 brains are random or zero'd
 RULES['node_space']         = 1             # digits length for each node
-RULES['weights_space']      = [-1, 1]       # random value limits for weights
-RULES['mutation_rate']      = .3            # each mutation occurance chance
+RULES['weights_space']      = [-2, 2]       # random value limits for weights
+RULES['mutation_rate']      = .5            # each mutation occurance chance
 RULES['activation_slopes']  = [0, 1]        # limits of f(x): m*x as x -> inf
-RULES['num_parents']        = 2             # parents chosen for each child
+RULES['num_parents']        = 3             # parents chosen for each child
 
 # returns list of brains with length of population ->
 #   [{<brain>}, {<brain>}, {<brain>}, ..., {<brain>}]
@@ -149,6 +151,8 @@ def MoveNode(brain):
 # return brain with a randomly added node
 def AddNode(brain):
     node = 'B' + GenerateID()
+    while node in brain['nodes']:
+        node = 'B' + GenerateID()
     brain['nodes'][node], brain['links'][node] = 0, {}
     return brain
 
@@ -247,8 +251,20 @@ def Propogate(brain):
         bn[node] = Activate(bn[node])
     return brain
 
-# activation function
+# hills and valleys
 def Activate(x):
+    return (1.4652882650115730539 * sin(x * pi) + x) / 2
+
+# activation function 2 "Zig Zag"
+def Activate2(x):
+    return x + abs(x) - abs(x + 1)
+
+# activation function 3
+def Activate3(x):
+    return (5 * x + 8 * abs(x + 1) - 4 * abs(x + 2)) / 10
+
+# activation function 4
+def Activate4(x):
     a = RULES['activation_slopes'][1] + RULES['activation_slopes'][0]
     b = RULES['activation_slopes'][1] - RULES['activation_slopes'][0]
     return x * (a + b * Tanh(x)) / 2
@@ -325,12 +341,14 @@ def NormalizeFitness(NN):
     return NN
 
 # create next generation
-def Selection(NN):
+def Selection(NN, nomads=0.0):
     NN.sort(key = lambda brain: brain['fitness'], reverse=True)
     NEW, fitness = [NN[0]], [brain['adjusted_fitness'] for brain in NN]
-    while len(NEW) < len(NN):
+    while len(NEW) < len(NN) * (1 - nomads):
         parents = RCS(population=NN, weights=fitness, k=RULES['num_parents'])
         NEW += [Crossover(parents)]
+    while len(NEW) < len(NN):
+        NEW += [Brain(RULES['network_structure'])]
     return NEW[:]
 
 # return child with random weights from parents
