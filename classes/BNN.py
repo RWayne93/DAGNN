@@ -52,7 +52,7 @@ class Bunny:
         for i in range(self.C):
             j = self.A + self.B
             self.O += Activate(Bits(self.N & (P & (1 << j) - 1))) * (1 << i)
-            P >> j
+            P >>= j
 
 # a: intenger, b: mask_length, c: start_position, d: cycle_length, e: right_shifts
 def Cycle(a, b, c, d, e):
@@ -62,8 +62,11 @@ def Cycle(a, b, c, d, e):
     return a >> f << f | (((1 << e) - 1 & h) << d - e | h >> e) << g | (1 << g) - 1 & a
 
 def Activate(n):
-    i = 0 if n in [0, 2] else 1
-    return i
+    # i = 0 if n in [0, 2] else 1
+    # return i
+    if n in [1, 4]:
+        return 1
+    return 0
 
 def Bits(n):
     return (bin(n)).count('1')
@@ -124,18 +127,53 @@ C = 1
     True               1, 1, 1, 1            0
 """
 
+TRUTH_TABLES = {
+    "False": [0, 0, 0, 0],
+    "A and B": [0, 0, 0, 1],
+    "B": [0, 0, 1, 1],
+    "A and not B": [0, 1, 0, 0],
+    "not A and B": [0, 0, 1, 0],
+    "not A not B": [1, 0, 1, 0],
+    "A": [0, 1, 0, 1],
+    "A xor B": [0, 1, 1, 0],
+    "A or B": [0, 1, 1, 1],
+    "not A and not B": [1, 0, 0, 0],
+    "not (A xor B)": [1, 0, 0, 1],
+    "not A or B": [1, 0, 1, 1],
+    "not B": [1, 1, 0, 0],
+    "A or not B": [1, 1, 0, 1],
+    "not (A and B)": [1, 1, 1, 0],
+    "True": [1, 1, 1, 1]
+}
+
+
+
 base = Bunny(A, B, C, False)
 S = base.Size()
+
+# for i in range(1 << S):
+#     b = Bunny(A, B, C, False)
+#     b.G = i
+
+#     for j in range(4):
+#         b.N = 4 + j
+#         b.Propogate()
+#         #       0,0   0,1   1,0   1,1
+#         test = [1,    1,    1,    1][j]
+#         b.F += b.O == test
+
+#     print(b.F, Int2Str(i, len(str(1 << S))), Int2Bin(b.G, S))
 
 for i in range(1 << S):
     b = Bunny(A, B, C, False)
     b.G = i
-
-    for j in range(4):
-        b.N = 4 + j
-        b.Propogate()
-        #       0,0   0,1   1,0   1,1
-        test = [1,    1,    1,    1][j]
-        b.F += b.O == test
-
-    print(b.F, Int2Str(i, len(str(1 << S))), Int2Bin(b.G, S))
+    
+    for function_name, expected_outputs in TRUTH_TABLES.items():
+        correct_outputs = 0
+        for j in range(4):
+            b.N = 4 + j
+            b.Propogate()
+            correct_outputs += b.O == expected_outputs[j]
+            
+        # For debugging, you can print the fitness for each function:
+        print(f"{function_name}: {correct_outputs}")
