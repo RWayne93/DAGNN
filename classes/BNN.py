@@ -2,7 +2,7 @@ from random import randint
 
 RULES = {}
 RULES['population'] = 1 << 7        # 2 ** (X + 1)
-RULES['network']    = [2, 0, 1]     # number of nodes in layers A, B, and C
+RULES['network']    = [3, 1, 1]     # number of nodes in layers A, B, and C
 RULES['mutation']   = 0.5           # mutation rate
 
 class Bunch:
@@ -48,7 +48,7 @@ class Bunny:
         for i in range(self.B):
             j = self.A + i
             self.N += Activate(Bits(self.N & (P & (1 << j) - 1))) * (1 << j)
-            P >> j
+            P >>= j
         for i in range(self.C):
             j = self.A + self.B
             self.O += Activate(Bits(self.N & (P & (1 << j) - 1))) * (1 << i)
@@ -62,8 +62,8 @@ def Cycle(a, b, c, d, e):
     return a >> f << f | (((1 << e) - 1 & h) << d - e | h >> e) << g | (1 << g) - 1 & a
 
 def Activate(n):
-    # i = 0 if n in [0, 2] else 1
-    # return i
+    #if n in [0, 1, 3]
+    #    return n
     if n in [1, 4]:
         return 1
     return 0
@@ -79,6 +79,9 @@ def Int2Bin(n, s=-1):
 
 def Bin2Int(n):
     return int(n, 2)
+
+def Int2Str(n, l):
+    return ' ' * max(0, l - len(str(n))) + str(n)
 
 """
     def Molt(self):
@@ -100,33 +103,6 @@ def Bin2Int(n):
         return None
 """
 
-def Int2Str(n, l):
-    return ' ' * max(0, l - len(str(n))) + str(n)
-
-A = 3
-B = 0
-C = 1
-
-"""
-    INSTRUMENT         T/F REPRESENTATION    min len of B for 100%
-    False              0, 0, 0, 0            0
-    A and B            0, 0, 0, 1            1
-    not A and B        0, 0, 1, 0            ...
-    B                  0, 0, 1, 1            0
-    A and not B        0, 1, 0, 0            ...
-    A                  0, 1, 0, 1            0
-    A xor B            0, 1, 1, 0            0
-    A or B             0, 1, 1, 1            ...
-    not A and not B    1, 0, 0, 0            ...
-    not (A xor B)      1, 0, 0, 1            0
-    not A and B        1, 0, 1, 0            0
-    not A or B         1, 0, 1, 1            ...
-    not B              1, 1, 0, 0            0
-    A or not B         1, 1, 0, 1            ...
-    not (A and B)      1, 1, 1, 0            ...
-    True               1, 1, 1, 1            0
-"""
-
 TRUTH_TABLES = {
     "False": [0, 0, 0, 0],
     "A and B": [0, 0, 0, 1],
@@ -146,7 +122,9 @@ TRUTH_TABLES = {
     "True": [1, 1, 1, 1]
 }
 
-
+A = 3
+B = 1
+C = 1
 
 base = Bunny(A, B, C, False)
 S = base.Size()
