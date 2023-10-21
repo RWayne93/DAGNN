@@ -177,3 +177,27 @@ for i in range(1 << S):
             
         # For debugging, you can print the fitness for each function:
         print(f"{function_name}: {correct_outputs}")
+
+
+network_configs = [
+    [2, 0, 1],
+    [2, 1, 1],
+    [2, 2, 1],
+    [2, 3, 1],
+    # ... add as many configurations as you're interested in testing
+]
+
+results = {}
+
+for config in network_configs:
+    RULES['network'] = config
+    # Initialize and simulate/test your Bunch of bunnies here.
+    bunch = Bunch()
+    # ... your simulation/testing code
+    # At the end, store the average fitness (or some other metric) of the bunnies.
+    avg_fitness = sum([bunny.F for bunny in bunch.bunnies]) / len(bunch.bunnies)
+    results[str(config)] = avg_fitness
+
+# Once all simulations are done, print out the results:
+for config, fitness in results.items():
+    print(f"Configuration {config}: Average Fitness = {fitness}")
