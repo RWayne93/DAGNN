@@ -62,7 +62,7 @@ def Cycle(a, b, c, d, e):
     return a >> f << f | (((1 << e) - 1 & h) << d - e | h >> e) << g | (1 << g) - 1 & a
 
 def Activate(n): # return 1 if n is a triangle number: else 0
-    return 1 * (1 == (n * 8 + 1) ** .5 % 2)
+    return 1 * (0 == (n * 8 + 1) ** .5 % 1)
 
 def Bits(n):
     return (bin(n)).count('1')
