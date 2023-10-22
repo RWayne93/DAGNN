@@ -34,8 +34,7 @@ class Bunny:
         if self.S == 0:
             self.S = self.A * self.C + self.B * (self.A + self.C) + self.B * (self.B - 1) // 2
         return self.S
-    def Propogate(self):                # computes self.O from self.G, self.S, and self.N
-        self.O = 0
+    def Transform(self):             # computes P transformation of bits on self.G for propogation
         P = self.G + 0
         for i in range(self.B - 1):
             P = Cycle(P, self.S, self.C * (i + 1), self.A + self.C + self.B + self.B * 2 * i - i * (i - 1) // 2 - 1, self.C)
@@ -45,6 +44,11 @@ class Bunny:
                 P = Cycle(P, self.S, 1 + self.B * i + j, self.C - i + j * (self.C - i - 1), 1)
         for i in range(self.C - 1):
             P = Cycle(P, self.S, i * (self.A + self.B) + self.B, self.B * (self.C - i - 1) + self.A, self.A)
+        print(self.G, P)
+        return P
+    def Propogate(self):                # computes self.O from transformed self.G, self.S, and self.N
+        self.O = 0
+        P = self.Transform()
         for i in range(self.B):
             j = self.A + i
             self.N += Activate(Bits(self.N & (P & (1 << j) - 1))) * (1 << j)
@@ -55,6 +59,12 @@ class Bunny:
             P >>= j
 
 # a: intenger, b: mask_length, c: start_position, d: cycle_length, e: right_shifts
+# pad zero's to the left of the number equal to the difference of mask_length - len(integer)
+# keep bits unchanged to the left of the start_position
+# keeps bits unchanged to the right of the end_position (start_position + cycle_length)
+# the bits in the cycle are what's left in the middle
+# perform a circular shift to the right on the bits in the middle of the number
+# bits pushed off the right side get filled in to the left side
 def Cycle(a, b, c, d, e):
     f = b - c
     g = f - d
