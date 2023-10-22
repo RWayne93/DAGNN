@@ -1,4 +1,4 @@
-from random import randint
+from random import randint, choices, random
 
 RULES = {}
 RULES['population'] = 1 << 7        # 2 ** (X + 1)
