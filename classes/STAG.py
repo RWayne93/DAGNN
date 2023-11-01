@@ -26,7 +26,7 @@ class STAG:
             # create link with random weight between input and hidden nodes to other hidden nodes and output nodes
             j = 0
             while j < len(D):
-                if D[j] == node_1: j += 1
+                while D[j] <= node_1: j += 1
                 node_2 = D[j]
                 self.L += [(node_1, node_2)]
                 self.N[node_1]['links'][node_2] = self.RandomWeight()
