@@ -6,7 +6,8 @@ class STAG:
         self.A = tuple(['A' + str(i).zfill(len(str(input_size - 1))) for i in range(input_size)]) # input node ids
         self.B = tuple(['B' + str(i).zfill(len(str(hidden_size - 1))) for i in range(hidden_size)]) # hidden node ids
         self.C = tuple(['C' + str(i).zfill(len(str(output_size - 1))) for i in range(output_size)]) # output node ids
-        self.E = 1 # error / fitness
+        self.E = 1 # error
+        self.F = 0 # fitness / score on unit-tests
         self.I = [] # unit tests / input values
         self.L = [] # list of links
         self.N = {} # node data
@@ -63,8 +64,12 @@ class STAG:
         # pass output nodes to self.O
         for node in self.C: self.O |= {node: self.N[node]['value']}
 
-        # compute error / fitness as sum of differences squared between output nodes and expected outputs from unit test
-        for node in self.P: self.E += Error(self.O[node], self.P[node])
+        for node in self.P:
+            # compound error between output nodes and expected outputs from unit test
+            self.E += Error(self.O[node], self.P[node])
+
+            # compound fitness
+            self.F += abs(self.O[node] - self.P[node]) < 0.5
 
     # select random links for later adjustment with learning rate
     def PickQ(self):
@@ -74,7 +79,7 @@ class STAG:
 
     # compute error from passing test through network
     def Test(self, tests):
-        self.E = 0
+        self.E, self.F = 0, 0
         for inputs, outputs in tests:
             self.I = inputs
             self.P = outputs
@@ -84,11 +89,10 @@ class STAG:
     def Learn(self, tests, max_gens=1000):
         gen = 0
         # stop if max generations exceeded or error passes threshold
-        while gen < max_gens and self.E > self.T:
+        while gen < max_gens and self.E > self.T and self.F < len(tests):
             # get current error
             self.Test(tests)
             current_error = self.E + 0
-            print(f'gen: {gen}    error: {current_error:0.3f}')
 
             # adjust learning rate for each selected Q-link
             self.PickQ()
@@ -113,8 +117,12 @@ class STAG:
             (node_1, node_2), err = self.Q[0]
             self.N[node_1]['links'][node_2] += self.R * [1, -1][err < 0]
 
+            print(f'gen: {gen}    error: {self.E:0.3f}    score: {self.F} / {len(tests)}')
+
             gen += 1
         print(self.N)
+
+    #def Prune(self, tests):
 
 # node activation function: f(x) = x - tanh(x)
 def Activate(x):
@@ -122,14 +130,12 @@ def Activate(x):
     a, b = e ** x, e ** (-x)
     return x - (a - b) / (a + b)
 
-# error function: difference squared
+# error function: difference squared (or + binary classification)
 def Error(x, y):
     return (x - y) ** 2
-"""
     a = (x - y) ** 2
     b = (2 * x - 1) * (2 * y - 1) < 0
-    return 1 - (a + b)
-"""
+    return a + b
 
 #######################################################################
 #######################################################################
