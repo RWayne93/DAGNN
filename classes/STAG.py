@@ -250,8 +250,7 @@ class STAG:
 # node activation function: f(x) = x - tanh(x)
 def Activate(x):
     e = 2.7182818284590452
-    a, b = e ** x, e ** (-x)
-    return x - (a - b) / (a + b)
+    return x + 2 / (1 + e ** (2 * x)) - 1
 
 
 
