@@ -1,4 +1,8 @@
+
 from random import random as R
+
+
+
 
 # Sorted Topological Acyclical Graph
 class STAG:
@@ -6,18 +10,23 @@ class STAG:
         self.A = tuple(['A' + str(i).zfill(len(str(input_size - 1))) for i in range(input_size)]) # input node ids
         self.B = tuple(['B' + str(i).zfill(len(str(hidden_size - 1))) for i in range(hidden_size)]) # hidden node ids
         self.C = tuple(['C' + str(i).zfill(len(str(output_size - 1))) for i in range(output_size)]) # output node ids
-        self.E = 1 # error
+        self.E = 0 # error
         self.F = 0 # fitness / score on unit-tests
+        self.G = 9999 # max generations
         self.I = [] # unit tests / input values
         self.L = [] # list of links
-        self.N = {} # node data
+        self.N = {} # node data / network
         self.O = {} # output nodes
         self.P = [] # unit tests / predicted values of output nodes
         self.Q = {} # links selected for random walk backward
         self.R = 0.001 # learning rate
         self.S = 0 # size / length of self.L
         self.T = 0.01 # threshold of error
+        self.U = {} # unit tests
         self.W = (-1, 1) # initial domain of random weights
+        self.X = None # previous links
+        self.Y = None # previous network
+        self.Z = True # prune while True
 
         D = self.B + self.C
         for node_1 in self.A + self.B:
@@ -38,9 +47,30 @@ class STAG:
         self.L = tuple(self.L)
         self.S = len(self.L)
 
+
+
+
+    # update links and network size
+    def UpdateLinks(self):
+        self.L = []
+        nodes = [nodes for nodes in self.N if nodes[0] != 'C']
+        for node_1 in nodes:
+            for node_2 in self.N[node_1]['links']:
+                self.L += [(node_1, node_2)]
+        (self.L).sort(key = lambda x: x[1])
+        (self.L).sort(key = lambda x: x[0])
+        self.L = tuple(self.L)
+        self.S = len(self.L)
+
+
+
+
     # return random weight between values of self.W
     def RandomWeight(self):
         return R() * (self.W[1] - self.W[0]) + self.W[0]
+
+
+
 
     # propogate input node values through the network to compute output node values
     def Forward(self):
@@ -71,27 +101,46 @@ class STAG:
             # compound fitness
             self.F += abs(self.O[node] - self.P[node]) < 0.5
 
+
+
+
     # select random links for later adjustment with learning rate
     def PickQ(self):
         self.Q = {}
         while len(self.Q) < (self.S ** .4) // 1:
             self.Q |= {self.L[int(len(self.L) * R())]: 0}
 
+
+
+
     # compute error from passing test through network
-    def Test(self, tests):
+    def Test(self):
         self.E, self.F = 0, 0
-        for inputs, outputs in tests:
+        for inputs, outputs in self.U:
             self.I = inputs
             self.P = outputs
             self.Forward()
 
+
+
+
     # machine learning for network
-    def Learn(self, tests, max_gens=1000):
+    def Learn(self, minimize_error=False):
+
         gen = 0
-        # stop if max generations exceeded or error passes threshold
-        while gen < max_gens and self.E > self.T and self.F < len(tests):
+        self.E, self.F = 0, 0
+        self.Test()
+
+        again = self.F < len(self.U)
+        if minimize_error:
+            print('\n :: minimizing error ::\n')
+            again = self.E > self.T
+        else:
+            print('\n :: learning ::\n')
+
+        # stop if max generations exceeded or fitness is 100%
+        while gen < self.G and again:
             # get current error
-            self.Test(tests)
             current_error = self.E + 0
 
             # adjust learning rate for each selected Q-link
@@ -103,7 +152,7 @@ class STAG:
                 self.N[node_1]['links'][node_2] += self.R
 
                 # compute error difference after applying the learning rate
-                self.Test(tests)
+                self.Test()
                 self.Q[Q] = (current_error - self.E) / self.R
 
                 # remove learning rate from Q-link
@@ -117,12 +166,86 @@ class STAG:
             (node_1, node_2), err = self.Q[0]
             self.N[node_1]['links'][node_2] += self.R * [1, -1][err < 0]
 
-            print(f'gen: {gen}    error: {self.E:0.3f}    score: {self.F} / {len(tests)}')
-
+            # print every 100th generation
+            if gen % 100 == 0: print(f'gen: {gen}    error: {self.E:0.4f}    score: {self.F} / {len(self.U)}')
             gen += 1
+
+            # test for next generation
+            self.Test()
+
+            again = self.F < len(self.U)
+            if minimize_error:
+                again = self.E > self.T
+
+        # stop pruning if unsuccessful
+        if gen == self.G:
+            self.Z = False
+            print('\n :: max generations reached. failed end-state ::')
+            print(self.N)
+
+        else:
+            # save current links and network
+            self.X = str(self.L)
+            self.Y = str(self.N)
+            print(f'gen: {gen}    error: {self.E:0.4f}    score: {self.F} / {len(self.U)}')
+            if minimize_error:
+                print('\n :: minimizing complete ::\n')
+            else:
+                print('\n :: learning complete ::\n')
+            print(self.N)
+
+
+
+
+    def Prune(self):
+
+        print('\n :: pruning ::')
+        self.G //= 10
+        while self.Z:
+
+            # save current links and network
+            self.X = str(self.L)
+            self.Y = str(self.N)
+
+            # select smallest link
+            j = 0
+            link = self.L[j]
+            node_1, node_2 = link
+            weight = abs(self.N[node_1]['links'][node_2])
+            smallest_link = [link, weight]
+            for i in range(1, len(self.L)):
+                link = self.L[i]
+                node_1, node_2 = link
+                weight = abs(self.N[node_1]['links'][node_2])
+                if weight < smallest_link[1]:
+                    j = i + 0
+                    smallest_link = [link, weight]
+
+            # delete smallest link
+            node_1, node_2 = smallest_link[0]
+            print(f'\nremoving link: ({node_1},{node_2})')
+            self.N[node_1]['links'].pop(node_2)
+            self.L = self.L[:j] + self.L[j+1:]
+
+            # re-evaluate
+            if self.Z:
+                self.Learn()
+
+        # restore previous links and network
+        self.L = eval(self.X)
+        self.N = eval(self.Y)
+        self.G *= 10
+
+        # display
+        print(f'\n :: pruning complete. pruned {self.S - len(self.L)} links. current size = {len(self.L)} ::\n')
         print(self.N)
 
-    #def Prune(self, tests):
+        # confirm unit testing
+        self.Test()
+        print(f'\n :: final unit testing.    error: {self.E:0.4f}    score: {self.F} / {len(self.U)} ::\n')
+
+
+
 
 # node activation function: f(x) = x - tanh(x)
 def Activate(x):
@@ -130,31 +253,22 @@ def Activate(x):
     a, b = e ** x, e ** (-x)
     return x - (a - b) / (a + b)
 
+
+
+
 # error function: difference squared (or + binary classification)
 def Error(x, y):
     return (x - y) ** 2
-    a = (x - y) ** 2
-    b = (2 * x - 1) * (2 * y - 1) < 0
-    return a + b
+
+
+
 
 #######################################################################
 #######################################################################
 #######################################################################
 #######################################################################
 
-# UNIT TESTING
-
-"""
-A, B, C = 3, 1, 1
-NN = STAG(A, B, C)
-
-unit_tests = [
-    ({'A0':1, 'A1':0, 'A2':0}, {'C0':1}),
-    ({'A0':1, 'A1':0, 'A2':1}, {'C0':0}),
-    ({'A0':1, 'A1':1, 'A2':0}, {'C0':0}),
-    ({'A0':1, 'A1':1, 'A2':1}, {'C0':1})
-]
-"""
+# UNIT TESTING / LEARNING / PRUNING
 
 unit_tests = [
     ({'A0': 1, 'A1': 0, 'A2': 0, 'A3': 0, 'A4': 0, 'A5': 0, 'A6': 0}, {'C0': 0}),
@@ -222,12 +336,23 @@ unit_tests = [
     ({'A0': 1, 'A1': 1, 'A2': 1, 'A3': 1, 'A4': 1, 'A5': 1, 'A6': 0}, {'C0': 1}),
     ({'A0': 1, 'A1': 1, 'A2': 1, 'A3': 1, 'A4': 1, 'A5': 1, 'A6': 1}, {'C0': 1})
 ]
-A, B, C = 7, 3, 1
+
+# initialize
+A, B, C = 7, 3, 1 # initial size is 34 (3 * (7 + 3) + 7 - 3)
 NN = STAG(A, B, C)
+NN.U = unit_tests
 
-# adjust learning rate, weights, and threshold
+# NN with size 17 and 64 / 64 unit tests
+# NN.N = {'A0': {'value': 1, 'links': {'B2': 0.7086387870182593}}, 'A1': {'value': 1, 'links': {'B0': 0.6342261014389761, 'B2': 0.6309269748759583}}, 'A2': {'value': 1, 'links': {'B1': -0.52105251318228}}, 'A3': {'value': 1, 'links': {'C0': 0.5801790638745178}}, 'A4': {'value': 1, 'links': {'B0': -0.6317295623446831, 'B1': 0.4842387824478621}}, 'A5': {'value': 1, 'links': {'B0': 0.970803637557468, 'B1': 1.4302828624030022, 'C0': 1.3731483551437913}}, 'A6': {'value': 1, 'links': {'B0': 1.6442469746018904, 'B1': -1.3701947611462464, 'C0': 0.29706740207613774}}, 'B0': {'value': 1.6281433567982935, 'links': {'B2': -1.175214763511832}}, 'B1': {'value': 4.201636576908058e-06, 'links': {'B2': -1.2616379955069281, 'C0': -0.3605401396080459}}, 'B2': {'value': -0.055670930204142044, 'links': {'C0': 3.68302208079631}}, 'C0': {'value': 1.0782602775907635}}
+# NN.UpdateLinks()
+
+# adjust max generations, learning rate, weights, and error threshold
+NN.G = 100000
 NN.R = 0.001
+NN.T = 1.1
 NN.W = [-1, 1]
-NN.T = 0.25
 
-NN.Learn(unit_tests, max_gens=99999)
+# Run
+NN.Learn()
+NN.Prune()
+NN.Learn(minimize_error=True)
