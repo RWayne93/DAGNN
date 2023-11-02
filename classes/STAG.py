@@ -143,7 +143,7 @@ class STAG:
         # stop if max generations exceeded or fitness is 100% (if minimizing error: if max generations exceeded or fitness is not 100%)
         while gen < self.G and again:
 
-            # get current error
+            # get current error for adpative learning rate
             current_error = self.E + 0
 
             # adjust learning rate for each selected Q-link
@@ -176,6 +176,7 @@ class STAG:
             # test for next generation
             self.Test()
 
+            # adaptive learning rate
             if self.E < current_error:
                 self.R *= 1.1
             else:
@@ -193,6 +194,7 @@ class STAG:
                     self.X = str(self.L)
                     self.Y = str(self.N)
 
+        # reset adaptive learning rate
         self.R = initial_R + 0
 
         # stop pruning if unsuccessful
