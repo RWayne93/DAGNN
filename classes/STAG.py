@@ -12,18 +12,17 @@ class STAG:
         self.C = tuple(['C' + str(i).zfill(len(str(output_size - 1))) for i in range(output_size)]) # output node ids
         self.E = 0 # error
         self.F = 0 # fitness / score on unit-tests
-        self.G = 9999 # max generations
+        self.G = 2000 # max generations
         self.I = [] # unit tests / input values
         self.L = [] # list of links
         self.N = {} # node data / network
         self.O = {} # output nodes
         self.P = [] # unit tests / predicted values of output nodes
         self.Q = {} # links selected for random walk backward
-        self.R = 0.001 # learning rate
+        self.R = 0.005 # learning rate
         self.S = 0 # size / length of self.L
-        self.T = 0.01 # threshold of error
+        self.T = 1.5 # threshold of error
         self.U = {} # unit tests
-        self.V = [0, 1, 0] # parametric ReLU
         self.W = (-1, 1) # initial domain of random weights
         self.X = None # previous links
         self.Y = None # previous network
@@ -40,7 +39,8 @@ class STAG:
                 while D[j] <= node_1: j += 1
                 node_2 = D[j]
                 self.L += [(node_1, node_2)]
-                self.N[node_1]['links'][node_2] = self.RandomWeight()
+                # return random weight between values of self.W
+                self.N[node_1]['links'][node_2] = R() * (self.W[1] - self.W[0]) + self.W[0]
                 j += 1
 
         # assign output node ids to node data
@@ -66,21 +66,12 @@ class STAG:
 
 
 
-    # return random weight between values of self.W
-    def RandomWeight(self):
-        return R() * (self.W[1] - self.W[0]) + self.W[0]
-
-
-
-
     # propogate input node values through the network to compute output node values
     def Forward(self):
 
         # node activation function
-        def Activate(x, a=self.V[0], b=self.V[1], c=self.V[2]):
-            return x * ( (a+b) - (a-b) * tanh(x * min(1,1-c) / min(1,1+c)) ) / 2 # Parametric ReLU
-            return x * (1+tanh(x))/2 # swish function
-            return x - tanh(x) # no longer as good as Parametric ReLU, maybe?
+        def Activate(x):
+            return x * tanh(x) / 2
 
         # set input nodes to values assigned by unit test
         for node in self.A: self.N[node]['value'] = self.I[node]
@@ -109,15 +100,6 @@ class STAG:
 
             # compound fitness
             self.F += z < 1.5
-
-
-
-
-    # select random links for later adjustment with learning rate
-    def PickQ(self):
-        self.Q = {}
-        while len(self.Q) < (self.S ** .4) // 1:
-            self.Q |= {self.L[int(len(self.L) * R())]: 0}
 
 
 
@@ -155,8 +137,10 @@ class STAG:
             # get current error
             current_error = self.E + 0
 
-            # adjust learning rate for each selected Q-link
-            self.PickQ()
+            # adjust learning rate for select random links
+            self.Q = {}
+            while len(self.Q) < (self.S ** .4) // 1:
+                self.Q |= {self.L[int(len(self.L) * R())]: 0}
             for Q in self.Q:
                 node_1, node_2 = Q
 
@@ -277,7 +261,7 @@ class STAG:
             self.G *= 10
 
             # minimize error and confirm unit testing
-            NN.Learn(minimize_error=True)
+            self.Learn(minimize_error=True)
 
             # restore last successful links and network
             self.L = eval(self.X)
@@ -306,9 +290,6 @@ class STAG:
             file_string += Link(node_1, node_2, self.N[node_1]['links'][node_2], {'A':100, 'B':200, 'C':300}[node_1[:1]], int(node_1[1:]) * 50 + 50, {'A':100, 'B':200, 'C':300}[node_2[:1]], int(node_2[1:]) * 50 + 50)
         file_string += '\n</svg>'
 
-
-
-
         # nodes
         def Node(id, value, x_pos, y_pos):
             rgb = min(255, int(abs(value)*255))
@@ -320,9 +301,6 @@ class STAG:
             file_string += Node(node, self.N[node]['value'], {'A':100, 'B':200, 'C':300}[node[:1]], int(node[1:]) * 50 + 50)
         file_string += '\n</div>'
 
-
-
-
         # javascript
         file_string += f'\n\n<script>'
 
@@ -331,18 +309,12 @@ class STAG:
 
         file_string += '\n</script>'
 
-
-
-
         # css
         file_string += '\n\n<style>'
         file_string += '\n body {margin:0; background-color:#222}'
         file_string += '\n svg {height:100%; width:100%}'
         file_string += '\n .node {display:inline-block; position:absolute; height:20px; width:' + str(node_size) +'px; border-radius:50%; border:5px solid #000}'
         file_string += '\n</style>\n\n</body></html>'
-
-
-
 
         # write file
         file = open("graph.html", "w")
@@ -438,27 +410,9 @@ A, B, C = 7, 3, 1 # initial size is 34 (3 * (7 + 3) + 7 - 3)
 NN = STAG(A, B, C)
 NN.U = unit_tests
 
-# NN with size 16, 64 / 64 unit tests, [0, 1, 0] activation function
-# {"A0":{"B2":-2.202353876187023}, "A1":{"B0":0.7336267831162856}, "A2":{"C0":0.26563717950423277}, "A3":{"B1":-1.7565518709505878}, "A4":{"B2":-0.5529289040478272}, "A5":{"B0":-1.0032058545767186, "B1":0.7556467330947512, "B2":0.8337391541963765, "C0":0.7041640629648794}, "A6":{"B0":-2.656549977999619, "B1":-0.8522805933732219, "B2":1.7692073857092494}, "B0":{"B2":-0.5547046688863186, "C0":1.4891959642782011}, "B1":{"C0":-1.5687086644503008}, "B2":{"C0":-3.3749843904978207}}
-
-# adjust max generations, learning rate, weights, and error threshold
-NN.G = 5000
-NN.R = 0.01
-NN.T = 0
-NN.V = [R()*2-1, R()*2-1, R()*2-1]
-NN.W = [0, 0]
-
 # Run
 NN.Learn()
 NN.Prune()
 
 # NN.Test()
 NN.Visualize()
-
-print(NN.V)
-# NN.V                                                              Gens        Error       Size
-# [0.8819347091906977, 0.5404225475012714, -0.7988159445493883]     10000       2.8528      N/A
-# [-0.5618700850158733, -0.291392040504737, 0.4348949994733693]     10000       2.7414      N/A
-# [0.25926107728514625, -0.5289190787953544, -0.3208137563692337]   10000       12.1888     N/A
-# [-0.7665505122255238, 0.6287534795782836, 0.5453989654004536]     1080        1.9233      20
-# [-0.5020410108795272, -0.4087051755279054, -0.5359458254218252]   10000       2.6047      N/A
