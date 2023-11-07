@@ -1,7 +1,9 @@
 
 from random import random as R
 from math import tanh, log
-
+import matplotlib.pyplot as plt
+import networkx as nx
+from networkx.drawing.nx_agraph import graphviz_layout
 
 
 # Sorted Topological Acyclical Graph
@@ -12,7 +14,7 @@ class STAG:
         self.C = tuple(['C' + str(i).zfill(len(str(output_size - 1))) for i in range(output_size)]) # output node ids
         self.E = 0 # error
         self.F = 0 # fitness / score on unit-tests
-        self.G = 2000 # max generations
+        self.G = 9999 # max generations
         self.I = [] # unit tests / input values
         self.L = [] # list of links
         self.N = {} # node data / network
@@ -48,9 +50,6 @@ class STAG:
         self.L = tuple(self.L)
         self.S = len(self.L)
 
-
-
-
     # update links and network size
     def UpdateLinks(self):
         self.L = []
@@ -62,9 +61,6 @@ class STAG:
         (self.L).sort(key = lambda x: x[0])
         self.L = tuple(self.L)
         self.S = len(self.L)
-
-
-
 
     # propogate input node values through the network to compute output node values
     def Forward(self):
@@ -101,9 +97,6 @@ class STAG:
             # compound fitness
             self.F += z < 1.5
 
-
-
-
     # compute error from passing test through network
     def Test(self):
         self.E, self.F = 0, 0
@@ -111,9 +104,6 @@ class STAG:
             self.I = inputs
             self.P = outputs
             self.Forward()
-
-
-
 
     # machine learning for network
     def Learn(self, minimize_error=False):
@@ -167,7 +157,9 @@ class STAG:
             self.N[node_1]['links'][node_2] += self.R * [1, -1][err < 0]
 
             # print every 100th generation
-            if gen % 100 == 0: print(f'gen: {gen}    error: {self.E:0.4f}    score: {self.F} / {len(self.U)}')
+            if gen % 100 == 0: 
+                print(f'gen: {gen}    error: {self.E:0.4f}    score: {self.F} / {len(self.U)}')
+                self.Visualize()
             gen += 1
 
             # test for next generation
@@ -196,7 +188,7 @@ class STAG:
         if gen == self.G:
             print(f'gen: {gen}    error: {self.E:0.4f}    score: {self.F} / {len(self.U)}')
             print('\n :: max generations reached ::\n')
-            again = input('Continue Learning (<Enter> for Yes)?: ')
+            #again = input('Continue Learning (<Enter> for Yes)?: ')
             if again == '':
                 self.Learn(minimize_error)
             else:
@@ -272,57 +264,134 @@ class STAG:
             print(f'\n :: pruning complete. pruned {self.S - len(self.L)} links. current size = {len(self.L)} ::')
             print(f'\n :: final unit testing.    error: {self.E:0.4f}    score: {self.F} / {len(self.U)} ::\n')
 
+    
+
+    def Visualize(self):
+        # Create a new graph
+        G = nx.DiGraph()
+        
+        # Add nodes with the node type as the node attribute
+        for node in self.A:
+            G.add_node(node, type='input')
+        for node in self.B:
+            G.add_node(node, type='hidden')
+        for node in self.C:
+            G.add_node(node, type='output')
+        
+        # Add edges with weights as the edge attribute
+        for (node_1, node_2) in self.L:
+            weight = self.N[node_1]['links'].get(node_2, 0)
+            G.add_edge(node_1, node_2, weight=weight)
+
+        # Use Graphviz to position the nodes, with nodes laid out from left-to-right
+        pos = graphviz_layout(G, prog='dot', args='-Grankdir=LR')
+
+        # Define colors for edges
+        edge_colors = ['green' if G[u][v]['weight'] > 0 else 'red' for u, v in G.edges()]
+
+        # Clear the previous plot
+        plt.clf()
+
+        # Draw the network nodes
+        nx.draw_networkx_nodes(G, pos, node_size=700, 
+                            node_color=['skyblue' if n[0]=='A' else 'lightgreen' if n[0]=='B' else 'salmon' for n in G.nodes()])
+        
+        # Draw the network edges with colors
+        nx.draw_networkx_edges(G, pos, edge_color=edge_colors, width=weight)
+
+        # Draw the labels for the nodes
+        nx.draw_networkx_labels(G, pos, font_weight='bold')
+
+        # Optionally, you can draw edge labels here if needed
+
+        # Update the plot with title and other aesthetic parameters
+        plt.title('Neural Network Visualization')
+        plt.axis('off')  # Turn off the axis as it's not required
+        plt.pause(0.1)  # Pause to update the plot
+
+
+    # def Visualize(self):
+    #     # Create a new graph
+    #     G = nx.DiGraph()
+        
+    #     # Add nodes with the node type as the node attribute
+    #     for node in self.A:
+    #         G.add_node(node, type='input')
+    #     for node in self.B:
+    #         G.add_node(node, type='hidden')
+    #     for node in self.C:
+    #         G.add_node(node, type='output')
+        
+    #     # Add edges with weights as the edge attribute
+    #     for (node_1, node_2) in self.L:
+    #         weight = self.N[node_1]['links'].get(node_2, 0)
+    #         G.add_edge(node_1, node_2, weight=weight)
+
+    #     # Define the layout for our nodes 
+    #     pos = nx.shell_layout(G)
+
+    #     # Clear the previous plot
+    #     plt.clf()
+
+    #     # Draw the network
+    #     nx.draw(G, pos, with_labels=True, font_weight='bold', node_size=700,
+    #             node_color=['skyblue' if n[0]=='A' else 'lightgreen' if n[0]=='B' else 'salmon' for n in G.nodes()])
+        
+    #     # Draw edge labels
+    #     edge_labels = nx.get_edge_attributes(G, 'weight')
+    #     nx.draw_networkx_edge_labels(G, pos, edge_labels=edge_labels)
+
+    #     # Update the plot
+    #     plt.title('Neural Network Visualization')
+    #     plt.pause(0.1)  # Pause to update the plot
 
 
 
     # create html/js file with graph representation of network
-    def Visualize(self, node_size=20):
+    # def Visualize(self, node_size=20):
 
-        file_string = '<html><body>'
+    #     file_string = '<html><body>'
 
-        # links
-        def Link(node_1, node_2, weight, x1, y1, x2, y2):
-            return f'\n <line node_1="{node_1}" node_2="{node_2}" x1={x1+5+node_size/2} y1={y1+5+node_size/2} x2={x2+5+node_size/2} y2={y2+5+node_size/2} style="stroke-width:{abs(weight)}; stroke:{["#0f0b", "#f00b"][weight < 0]}"></line>'
+    #     # links
+    #     def Link(node_1, node_2, weight, x1, y1, x2, y2):
+    #         return f'\n <line node_1="{node_1}" node_2="{node_2}" x1={x1+5+node_size/2} y1={y1+5+node_size/2} x2={x2+5+node_size/2} y2={y2+5+node_size/2} style="stroke-width:{abs(weight)}; stroke:{["#0f0b", "#f00b"][weight < 0]}"></line>'
 
-        file_string += '\n\n<svg id="links">'
-        for link in self.L:
-            node_1, node_2 = link
-            file_string += Link(node_1, node_2, self.N[node_1]['links'][node_2], {'A':100, 'B':200, 'C':300}[node_1[:1]], int(node_1[1:]) * 50 + 50, {'A':100, 'B':200, 'C':300}[node_2[:1]], int(node_2[1:]) * 50 + 50)
-        file_string += '\n</svg>'
+    #     file_string += '\n\n<svg id="links">'
+    #     for link in self.L:
+    #         node_1, node_2 = link
+    #         file_string += Link(node_1, node_2, self.N[node_1]['links'][node_2], {'A':100, 'B':200, 'C':300}[node_1[:1]], int(node_1[1:]) * 50 + 50, {'A':100, 'B':200, 'C':300}[node_2[:1]], int(node_2[1:]) * 50 + 50)
+    #     file_string += '\n</svg>'
 
-        # nodes
-        def Node(id, value, x_pos, y_pos):
-            rgb = min(255, int(abs(value)*255))
-            rgb = [f'{rgb},0', f'0,{rgb}'][value > 0]
-            return f'\n <span id="{id}" class="node" value={value} style="left:{str(x_pos)}; top:{str(y_pos)}; background-color:rgb({rgb},0)"></span>'
+    #     # nodes
+    #     def Node(id, value, x_pos, y_pos):
+    #         rgb = min(255, int(abs(value)*255))
+    #         rgb = [f'{rgb},0', f'0,{rgb}'][value > 0]
+    #         return f'\n <span id="{id}" class="node" value={value} style="left:{str(x_pos)}; top:{str(y_pos)}; background-color:rgb({rgb},0)"></span>'
 
-        file_string += '\n\n<div id="nodes">'
-        for node in self.N:
-            file_string += Node(node, self.N[node]['value'], {'A':100, 'B':200, 'C':300}[node[:1]], int(node[1:]) * 50 + 50)
-        file_string += '\n</div>'
+    #     file_string += '\n\n<div id="nodes">'
+    #     for node in self.N:
+    #         file_string += Node(node, self.N[node]['value'], {'A':100, 'B':200, 'C':300}[node[:1]], int(node[1:]) * 50 + 50)
+    #     file_string += '\n</div>'
 
-        # javascript
-        file_string += f'\n\n<script>'
+    #     # javascript
+    #     file_string += f'\n\n<script>'
 
-        # javascript move node functionality()
-        # document.querySelectorAll('[my_attribute="attribute_value"]')
+    #     # javascript move node functionality()
+    #     # document.querySelectorAll('[my_attribute="attribute_value"]')
 
-        file_string += '\n</script>'
+    #     file_string += '\n</script>'
 
-        # css
-        file_string += '\n\n<style>'
-        file_string += '\n body {margin:0; background-color:#222}'
-        file_string += '\n svg {height:100%; width:100%}'
-        file_string += '\n .node {display:inline-block; position:absolute; height:20px; width:' + str(node_size) +'px; border-radius:50%; border:5px solid #000}'
-        file_string += '\n</style>\n\n</body></html>'
+    #     # css
+    #     file_string += '\n\n<style>'
+    #     file_string += '\n body {margin:0; background-color:#222}'
+    #     file_string += '\n svg {height:100%; width:100%}'
+    #     file_string += '\n .node {display:inline-block; position:absolute; height:20px; width:' + str(node_size) +'px; border-radius:50%; border:5px solid #000}'
+    #     file_string += '\n</style>\n\n</body></html>'
 
-        # write file
-        file = open("graph.html", "w")
-        file.write(file_string)
-        file.close()
-
-
-
+    #     # write file
+    #     file = open("graph.html", "w")
+    #     file.write(file_string)
+    #     file.close()
 
 #######################################################################
 #######################################################################
@@ -405,14 +474,25 @@ unit_tests = [
     ({'A0':1, 'A1':1, 'A2':1}, {'C0':1})
 ]"""
 
+total_error = []
+runs = 1
 # initialize
 A, B, C = 7, 3, 1 # initial size is 34 (3 * (7 + 3) + 7 - 3)
-NN = STAG(A, B, C)
-NN.U = unit_tests
+# NN = STAG(A, B, C)
+# NN.U = unit_tests
 
 # Run
-NN.Learn()
-NN.Prune()
+# NN.Learn()
+# NN.Prune()
+for _ in range(runs):
+    NN = STAG(A, B, C)
+    NN.U = unit_tests
+    NN.Learn()
+    NN.Prune()
+    total_error.append(NN.E)
+
+average_error = sum(total_error) / len(total_error)
+print(f"Average total error after {runs} runs: {average_error}")
 
 # NN.Test()
 NN.Visualize()
