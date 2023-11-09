@@ -20,11 +20,11 @@ class DAGNN:
         # hyper parameters
         self.error = 0
         self.fitness = 0
-        self.max_generations = 2_000
+        self.max_generations = 10_000
         self.unit_tests = []
         self.learning_rate = 0.01
         self.threshold = 2
-        self.weights = (1, -1, -1, 1) # initial weights for links in each quadrant
+        self.weights = (-.5, -.5, 0.5, 0.5) # initial weights for links in each quadrant
 
         # create and populate the links matrix
         self.links = np.zeros((self.A + self.B, self.B + self.C))
@@ -35,6 +35,20 @@ class DAGNN:
         self.links[self.A:, :self.B] = np.triu(np.full((self.B, self.B), self.weights[2]), k=1)
         self.links[self.A:, self.B:] = self.weights[3]
 
+    # B node activation function
+    def Activate(x):
+        return x * np.tanh(x)
+
+    # mean squared error function for two vectors
+    def MSE(vector_a, vector_b):
+        vector_error = np.vectorize(lambda x: abs(x) * np.log(abs(x) + 1))
+        return sum(vector_error(vector_a - vector_b))
+
+    # compare two vectors
+    def Score(vector_a, vector_b):
+        vector_classify = np.vectorize(lambda x, y: 1 * ((x - 0.5) * (y * 2 - 1) > 0))
+        return sum(vector_classify(vector_a, vector_b))
+
 
 
 
@@ -44,36 +58,21 @@ class DAGNN:
         # set initial B and C nodes from A links to B and C
         self.nodes[self.A:] = np.dot(self.nodes[:self.A], self.links[:self.A])
 
-        # B node activation function
-        def Activate(x):
-            return x * np.tanh(x)
-
         # activate B nodes and then compute B and C nodes from B links to B and C
         for i, _ in enumerate(self.nodes[self.A:-1]):
             j = i + self.A
-            self.nodes[j] = Activate(self.nodes[j])
-            # this might have an issue
+            self.nodes[j] = self.Activate(self.nodes[j])
             self.nodes[j+1:] += np.dot(self.nodes[j], self.links[j][i+1:])
 
         # C vector activation function
-        vector_activate = np.vectorize(Activate)
+        vector_activate = np.vectorize(self.Activate)
         self.nodes[-self.C:] = vector_activate(self.nodes[-self.C:])
 
-        # mean squared error function for two vectors
-        def MSE(vector_a, vector_b):
-            vector_error = np.vectorize(lambda x: abs(x) * np.log(abs(x) + 1))
-            return sum(vector_error(vector_a - vector_b))
-
         # compound error
-        self.error += MSE(np.array(self.nodes[-self.C:]), np.array(self.expected_output))
-
-        # compare two vectors
-        def Score(vector_a, vector_b):
-            vector_classify = np.vectorize(lambda x, y: 1 * ((x - 0.5) * (y * 2 - 1) > 0))
-            return sum(vector_classify(vector_a, vector_b))
+        self.error += self.MSE(np.array(self.nodes[-self.C:]), np.array(self.expected_output))
 
         # compound fitness
-        self.fitness += Score(self.nodes[-self.C:], self.expected_output)
+        self.fitness += self.Score(self.nodes[-self.C:], self.expected_output)
 
 
 
@@ -108,7 +107,7 @@ class DAGNN:
             # store changes in error
             current_error = self.error + 0
             Q = []
-            for i in range(2):
+            for i in range(1):
                 j = np.random.randint(0, self.A + self.B)
                 k = np.random.randint(max(0, j-self.A+1), self.B + self.C)
                 self.links[j][k] += self.learning_rate
@@ -117,7 +116,7 @@ class DAGNN:
                 self.links[j][k] -= self.learning_rate
 
             # sort q links
-            Q.sort(key = lambda x: abs(x[1]), reverse=True)
+            #Q.sort(key = lambda x: abs(x[1]), reverse=True)
 
             # update link in network with largest error gradient by learning rate
             (i, j), error = Q[0]
@@ -156,9 +155,5 @@ class DAGNN:
 # unit testing
 
 NN = DAGNN({'A':7, 'B':3, 'C': 1})
-unit_tests = [(list(map(int, bin(n)[2:])), [list(map(int, bin(n)[2:]))[1:5][n % 4]]) for n in range(64, 128)]
-
-print(NN.links)
-
-NN.unit_tests = unit_tests
+NN.unit_tests = [(list(map(int, bin(n)[2:])), [list(map(int, bin(n)[2:]))[1:5][n % 4]]) for n in range(64, 128)]
 NN.Learn()
