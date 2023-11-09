@@ -1,8 +1,6 @@
 
-import os
-os.system('cls')
-
 import numpy as np
+#import cProfile
 
 # Directed Acyclical Graph Neural Network
 class DAGNN:
@@ -24,7 +22,8 @@ class DAGNN:
         self.unit_tests = []
         self.learning_rate = 0.01
         self.threshold = 2
-        self.weights = (-.5, -.5, 0.5, 0.5) # initial weights for links in each quadrant
+        #self.weights = (-.5, -.5, 0.5, 0.5) # initial weights for links in each quadrant
+        self.weights = (0, 0, 0, 1)
 
         # create and populate the links matrix
         self.links = np.zeros((self.A + self.B, self.B + self.C))
@@ -36,21 +35,19 @@ class DAGNN:
         self.links[self.A:, self.B:] = self.weights[3]
 
     # B node activation function
-    def Activate(x):
+    def Activate(self, x):
         return x * np.tanh(x)
 
     # mean squared error function for two vectors
-    def MSE(vector_a, vector_b):
-        vector_error = np.vectorize(lambda x: abs(x) * np.log(abs(x) + 1))
-        return sum(vector_error(vector_a - vector_b))
+    def MSE(self, vector_a, vector_b):
+        error = np.abs(vector_a - vector_b) * np.log(np.abs(vector_a - vector_b) + 1)
+        return np.sum(error)
 
     # compare two vectors
-    def Score(vector_a, vector_b):
-        vector_classify = np.vectorize(lambda x, y: 1 * ((x - 0.5) * (y * 2 - 1) > 0))
-        return sum(vector_classify(vector_a, vector_b))
-
-
-
+    def Score(self, vector_a, vector_b):
+        vector_a = np.array(vector_a)
+        vector_b = np.array(vector_b)
+        return np.sum((vector_a - 0.5) * (vector_b * 2 - 1) > 0)
 
     # matrix multiplication and node activation
     def Forward(self):
@@ -65,7 +62,7 @@ class DAGNN:
             self.nodes[j+1:] += np.dot(self.nodes[j], self.links[j][i+1:])
 
         # C vector activation function
-        vector_activate = np.vectorize(self.Activate)
+        vector_activate = self.Activate
         self.nodes[-self.C:] = vector_activate(self.nodes[-self.C:])
 
         # compound error
@@ -75,17 +72,12 @@ class DAGNN:
         self.fitness += self.Score(self.nodes[-self.C:], self.expected_output)
 
 
-
-
     # compute error and fitness from unit tests
     def Test(self):
         self.error, self.fitness = 0, 0
         for inputs, outputs in self.unit_tests:
             self.nodes[:self.A], self.expected_output = inputs, outputs
             self.Forward()
-
-
-
 
     # machine learning algorithm
     def Learn(self, minimize_error=False):
@@ -123,7 +115,8 @@ class DAGNN:
             self.links[i][j] += self.learning_rate * [1, -1][error < 0]
 
             # print every 100th generation
-            if current_generation % 100 == 0: print(f'gen: {current_generation}    error: {self.error:0.4f}    score: {self.fitness} / {len(self.unit_tests)}')
+            if current_generation % 100 == 0: 
+                print(f'gen: {current_generation}    error: {self.error:0.4f}    score: {self.fitness} / {len(self.unit_tests)}')
             current_generation += 1
 
             # test for next generation
@@ -154,6 +147,11 @@ class DAGNN:
 
 # unit testing
 
-NN = DAGNN({'A':7, 'B':3, 'C': 1})
-NN.unit_tests = [(list(map(int, bin(n)[2:])), [list(map(int, bin(n)[2:]))[1:5][n % 4]]) for n in range(64, 128)]
-NN.Learn()
+if __name__ == '__main__':
+    NN = DAGNN({'A':7, 'B':3, 'C': 1})
+    NN.unit_tests = [(list(map(int, bin(n)[2:])), [list(map(int, bin(n)[2:]))[1:5][n % 4]]) for n in range(64, 128)]
+    #profiler = cProfile.Profile()
+    #profiler.enable()
+    NN.Learn()
+    #profiler.disable()
+    #profiler.print_stats()
