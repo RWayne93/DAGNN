@@ -1,6 +1,10 @@
 
-import numpy as np
-#import cProfile
+import os
+os.system('cls')
+
+from math import tanh, log
+from random import randint
+
 
 # Directed Acyclical Graph Neural Network
 class DAGNN:
@@ -22,55 +26,58 @@ class DAGNN:
         self.unit_tests = []
         self.learning_rate = 0.01
         self.threshold = 2
-        #self.weights = (-.5, -.5, 0.5, 0.5) # initial weights for links in each quadrant
+
+        # initial weights for links in each quadrant
         self.weights = (0, 0, 0, 1)
 
-        # create and populate the links matrix
-        self.links = np.zeros((self.A + self.B, self.B + self.C))
-        
-        # assign weights for each quadrant
-        self.links[:self.A, :self.B] = self.weights[0]
-        self.links[:self.A, self.B:] = self.weights[1]
-        self.links[self.A:, :self.B] = np.triu(np.full((self.B, self.B), self.weights[2]), k=1)
-        self.links[self.A:, self.B:] = self.weights[3]
+        # create and populate the links matrix, and assign weights for each quadrant
+        self.links = [
+            [self.weights[0] if i < self.A and j < self.B else
+            self.weights[1] if i < self.A else
+            0 if j + self.A <= i else
+            self.weights[2] if j < self.B else
+            self.weights[3]
+            for j in range(self.B + self.C)]
+            for i in range(self.A + self.B)
+        ]
+        print(self.links)
 
     # B node activation function
     def Activate(self, x):
-        return x * np.tanh(x)
+        return x * tanh(x)
 
     # mean squared error function for two vectors
-    def MSE(self, vector_a, vector_b):
-        error = np.abs(vector_a - vector_b) * np.log(np.abs(vector_a - vector_b) + 1)
-        return np.sum(error)
+    def MSE(self, a, b):
+        return sum((abs(x - y) * log(abs(x - y) + 1) for x, y in zip(a, b)))
 
     # compare two vectors
-    def Score(self, vector_a, vector_b):
-        vector_a = np.array(vector_a)
-        vector_b = np.array(vector_b)
-        return np.sum((vector_a - 0.5) * (vector_b * 2 - 1) > 0)
+    def Score(self, a, b):
+        return sum((1 * ((x - 0.5) * (y * 2 - 1) > 0) for x, y in zip(a, b)))
+
+    # dot product
+    def DotProduct(self, a, b):
+        return [sum(sublist[i] * j for j, sublist in zip(a, b)) for i in range(len(b[0]))]
 
     # matrix multiplication and node activation
     def Forward(self):
 
         # set initial B and C nodes from A links to B and C
-        self.nodes[self.A:] = np.dot(self.nodes[:self.A], self.links[:self.A])
+        self.nodes[self.A:] = self.DotProduct(self.nodes[:self.A], self.links[:self.A])
 
         # activate B nodes and then compute B and C nodes from B links to B and C
         for i, _ in enumerate(self.nodes[self.A:-1]):
             j = i + self.A
             self.nodes[j] = self.Activate(self.nodes[j])
-            self.nodes[j+1:] += np.dot(self.nodes[j], self.links[j][i+1:])
+            self.nodes[j+1:] = [a + b * self.nodes[j] for a, b in zip(self.nodes[j+1:], self.links[j][i+1:])]
 
         # C vector activation function
-        vector_activate = self.Activate
-        self.nodes[-self.C:] = vector_activate(self.nodes[-self.C:])
+        self.nodes[-self.C:] = [self.Activate(x) for x in self.nodes[-self.C:]]
 
         # compound error
-        self.error += self.MSE(np.array(self.nodes[-self.C:]), np.array(self.expected_output))
+        self.error += self.MSE(self.nodes[-self.C:], self.expected_output)
 
         # compound fitness
         self.fitness += self.Score(self.nodes[-self.C:], self.expected_output)
-
 
     # compute error and fitness from unit tests
     def Test(self):
@@ -100,8 +107,8 @@ class DAGNN:
             current_error = self.error + 0
             Q = []
             for i in range(1):
-                j = np.random.randint(0, self.A + self.B)
-                k = np.random.randint(max(0, j-self.A+1), self.B + self.C)
+                j = randint(0, self.A + self.B - 1)
+                k = randint(max(0, j-self.A+1), self.B + self.C - 1)
                 self.links[j][k] += self.learning_rate
                 self.Test()
                 Q += [[(j, k), (current_error - self.error) / self.learning_rate]]
@@ -115,8 +122,9 @@ class DAGNN:
             self.links[i][j] += self.learning_rate * [1, -1][error < 0]
 
             # print every 100th generation
-            if current_generation % 100 == 0: 
+            if current_generation % 100 == 0:
                 print(f'gen: {current_generation}    error: {self.error:0.4f}    score: {self.fitness} / {len(self.unit_tests)}')
+
             current_generation += 1
 
             # test for next generation
@@ -140,18 +148,19 @@ class DAGNN:
 
         self.learning_rate = initial_learning_rate + 0
 
-        # incomplete...
-
         print(f'gen: {current_generation}    error: {self.error:0.4f}    score: {self.fitness} / {len(self.unit_tests)}')
-        print(self.links)
+        for i in self.links: print(i)
+        print(self.nodes)
+
+    def Prune(self):
+
+        self.max_generations //= 10
+        while self.prune_again:
+
+            print('\n :: pruning ::')
 
 # unit testing
 
-if __name__ == '__main__':
-    NN = DAGNN({'A':7, 'B':3, 'C': 1})
-    NN.unit_tests = [(list(map(int, bin(n)[2:])), [list(map(int, bin(n)[2:]))[1:5][n % 4]]) for n in range(64, 128)]
-    #profiler = cProfile.Profile()
-    #profiler.enable()
-    NN.Learn()
-    #profiler.disable()
-    #profiler.print_stats()
+NN = DAGNN({'A':7, 'B':3, 'C': 1})
+NN.unit_tests = [([int(i) for i in bin(n)[2:]], [int(bin(n)[2:][1:5][n % 4])]) for n in range(64, 128)]
+NN.Learn()
