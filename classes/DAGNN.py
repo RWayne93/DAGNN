@@ -1,12 +1,6 @@
 
-import os
-os.system('cls')
-
 from math import tanh, log
 from random import randint
-
-
-
 
 # Directed Acyclical Graph Neural Network
 class DAGNN:
@@ -22,7 +16,7 @@ class DAGNN:
 
         # hyper parameters
         self.error, self.fitness = 0, 0
-        self.max_generations = 10_000
+        self.max_generations = 20_000
         self.unit_tests = []
         self.learning_rate = 0.01
         self.threshold = 2
@@ -41,8 +35,9 @@ class DAGNN:
         ]
         self.previous_links = str(self.links)
 
-
-
+    def debug_print(self, message, debug):
+        if debug:
+            print(message)
 
     # count number of non-zero weights in links
     def Size(self):
@@ -64,9 +59,6 @@ class DAGNN:
     def DotProduct(self, a, b):
         return [sum(sublist[i] * j for j, sublist in zip(a, b)) for i in range(len(b[0]))]
 
-
-
-
     # matrix multiplication and node activation
     def Forward(self):
 
@@ -86,9 +78,6 @@ class DAGNN:
         self.error += self.MSE(self.nodes[-self.C:], self.expected_output)
         self.fitness += self.Score(self.nodes[-self.C:], self.expected_output)
 
-
-
-
     # compute error and fitness from unit tests
     def Test(self):
         self.error, self.fitness = 0, 0
@@ -97,19 +86,18 @@ class DAGNN:
             self.Forward()
 
 
-
-
-    def Learn(self):
-        print('\n :: minimizing error ::\n') if self.pruning == 3 else print('\n :: learning ::\n')
+    def Learn(self, debug=False):
+        self.debug_print('\n :: minimizing error ::\n', debug) if self.pruning == 3 else self.debug_print('\n :: learning ::\n', debug)
         initial_learning_rate, current_generation = self.learning_rate + 0, 0
         learn_again = True
+        current_error = 0
         while learn_again:
             learn_again = self.fitness < len(self.unit_tests) and current_generation <= self.max_generations
             if self.pruning == 3: learn_again = self.fitness == len(self.unit_tests) and current_error <= self.max_generations and self.error > self.threshold
             # get current error and fitness
             self.Test()
             if current_generation % 100 == 0:
-                print(f'gen: {current_generation}    error: {self.error:0.4f}    score: {self.fitness} / {len(self.unit_tests)}')
+                self.debug_print(f'gen: {current_generation}    error: {self.error:0.4f}    score: {self.fitness} / {len(self.unit_tests)}', debug)
             # adjust random weight and learning rate
             current_error = self.error + 0
             i = randint(0, self.A + self.B - 1)
@@ -129,13 +117,14 @@ class DAGNN:
         # stopped learning
         self.learning_rate = initial_learning_rate + 0
         if current_generation > self.max_generations:
-            print('\n :: max generations reached ::\n')
-            prompt = 'pruning' if self.pruning == 1 else 'minimizing' if self.pruning == 3 else 'learning'
-            again = input(f'continue {prompt} (<enter> for yes)?: ')
+            self.debug_print('\n :: max generations reached ::\n', debug)
+            #prompt = 'pruning' if self.pruning == 1 else 'minimizing' if self.pruning == 3 else 'learning'
+            #gain = input(f'continue {prompt} (<enter> for yes)?: ')
+            again = '0'
             if again == '': self.Learn()
             else:
                 if self.pruning == 1:
-                    print('\n :: finished pruning ::\n')
+                    self.debug_print('\n :: finished pruning ::\n', debug)
                 else:
                     print('\n :: current failed end-state ::\n')
                 self.pruning = 2
@@ -145,9 +134,6 @@ class DAGNN:
             print(f'\n :: learning complete ::\n') if self.pruning != 3 else print(f'\n :: minimizing complete ::\n')
             for i in self.links: print(i)
             if self.pruning == 0: self.Prune()
-
-
-
 
     def Prune(self):
         print('\n :: pruning ::')
@@ -161,7 +147,7 @@ class DAGNN:
             for i, row in enumerate(self.links):
                 for j, weight in enumerate(row):
                     if weight != 0:
-                        if smallest_weight == None or abs(weight) < smallest_weight[1]:
+                        if smallest_weight is None or abs(weight) < smallest_weight[1]:
                             smallest_weight = [[i, j], abs(weight)]
             # delete smallest weight
             i, j = smallest_weight[0]
@@ -194,4 +180,4 @@ class DAGNN:
 
 NN = DAGNN({'A':7, 'B':3, 'C': 1})
 NN.unit_tests = [([int(i) for i in bin(n)[2:]], [int(bin(n)[2:][1:5][n % 4])]) for n in range(64, 128)]
-NN.Learn()
+NN.Learn(debug=True)
