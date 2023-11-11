@@ -16,16 +16,15 @@ class DAGNN:
 
     def Display(self):
         os.system('cls')
-        print(f' :: {self.stage} ::\n\n' + [f'gen: {self.current_generation}    ', ''][self.stage == 'finished'] + f'error: {self.error:.4f}    fitness: {self.fitness} / {self.num_tests}\n')
         for row in self.links: print('[ ' + ''.join([f'{w: .4f}  ' if w != 0 else '         ' for w in row])[:-2] + ' ]')
-        if self.stage == 'finished': print(f'\ncurrent size = {sum(1 for i in self.links for j in i if j != 0)} ::\n')
+        print(f'\n :: {self.stage} ::    ' + [f'gen: {self.current_generation}    ', ''][self.stage == 'finished'] + f'error: {self.error:.4f}    fitness: {self.fitness} / {self.num_tests}    ' + ['', f'size: {sum(1 for i in self.links for j in i if j != 0)}\n'][self.stage == 'finished'])
 
     def Activate(self, x): return x * tanh(x)
 
     def Forward(self):
         for i in range(self.BC):
-            j, k = i + self.A, min(i + self.A, self.AB)
-            self.nodes[j] = self.Activate(sum(x * y for x, y in zip(self.nodes[:k], [row[i] for row in self.links[:k]])))
+            j = i + self.A
+            self.nodes[j] = self.Activate(sum(x * y for x, y in zip(self.nodes[:j], [row[i] for row in self.links[:j]])))
         self.error   += sum((abs(x - y) * log(abs(x - y) + 1) for x, y in zip(self.nodes[-self.C:], self.expected_output)))
         self.fitness += sum((1 * ((x - 0.5) * (y * 2 - 1) > 0) for x, y in zip(self.nodes[-self.C:], self.expected_output)))
 
@@ -34,7 +33,8 @@ class DAGNN:
         for inputs, outputs in self.unit_tests:
             self.nodes[:self.A], self.expected_output = inputs, outputs
             self.Forward()
-        if self.fitness == self.num_tests: self.previous_links = str(self.links)
+        if self.fitness == self.num_tests:
+            self.previous_links = str(self.links)
         if display == 'display': self.Display()
 
     def UpdateWeight(self):
@@ -47,7 +47,7 @@ class DAGNN:
             self.Test()
             self.links[i][j], right_error = self.links[i][j] - self.step_rate, self.error + 0
             error_gradient = (current_error - right_error) / self.step_rate
-            self.links[i][j] += tanh(current_error * error_gradient / 150) / 1.5
+            self.links[i][j] += tanh(current_error * error_gradient / 200) / 1.5
         if self.current_generation % 100 == 0: self.Display()
 
     def Learn(self):
@@ -67,6 +67,7 @@ class DAGNN:
         elif self.stage == 'minimizing':
             self.stage, self.links = 'finished', eval(self.previous_links)
             self.Learn()
+            self.links = eval(self.previous_links)
 
     def Prune(self):
         self.stage = 'pruning'
