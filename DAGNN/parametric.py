@@ -1,5 +1,5 @@
 
-from DAGNN import *
+from main_py import DAGNN
 from math import sin, cos, pi
 from random import *
 
@@ -22,5 +22,11 @@ for i in range(50):
     NN.unit_tests += [((1,) + parametric(.5 + random()*.5, classification), class_vector)]
 
 NN.num_tests = len(NN.unit_tests) * C
+#print(NN.nodes)
+print(NN.links)
+print(len(NN.nodes))
+print(len(NN.links))
+#print(NN.unit_tests)
+
 
 NN.Learn()
